@@ -1,19 +1,27 @@
-import { Duration, Stack, StackProps } from 'aws-cdk-lib';
-import * as sns from 'aws-cdk-lib/aws-sns';
-import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
-import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { Stack, StackProps } from 'aws-cdk-lib';
+import { LayerVersion, Runtime, Code, Function } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 
 export class SampleStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    const queue = new sqs.Queue(this, 'SampleQueue', {
-      visibilityTimeout: Duration.seconds(300)
+    // Deploy a layer into AWS via CDK
+    const layer = new LayerVersion(this, 'LodashLayer', {
+      layerVersionName: 'TsLodashLayer',
+      compatibleRuntimes: [
+        Runtime.NODEJS_14_X
+      ],
+      code: Code.fromAsset('./lodash-layer'),
     });
 
-    const topic = new sns.Topic(this, 'SampleTopic');
-
-    topic.addSubscription(new subs.SqsSubscription(queue));
+    // Deploy a lambda into AWS via CDK
+    const lambda = new Function(this, 'SampleLambda', {
+      runtime: Runtime.NODEJS_14_X,
+      handler: 'main.handler',
+      code: Code.fromAsset('lambda'),
+      memorySize: 1024,
+      layers: [layer]
+    });
   }
 }
